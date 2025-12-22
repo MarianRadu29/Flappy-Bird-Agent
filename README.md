@@ -87,7 +87,22 @@ $$ Loss = \left( \underbrace{R + \gamma \max_{a'} Q(S', a')}_{\text{Target}} - \
 
 ## Installation
 
-1.  Instalează dependențele:
+1.  **Create a virtual environment**:
+    ```bash
+    python -m venv venv
+    ```
+
+2.  **Activate the virtual environment**:
+    *   **Windows**:
+        ```bash
+        .\venv\Scripts\activate
+        ```
+    *   **Linux/macOS**:
+        ```bash
+        source venv/bin/activate
+        ```
+
+3.  **Install dependencies**:
     ```bash
     pip install -r requirements.txt
     ```

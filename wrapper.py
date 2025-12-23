@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import pygame
 
+
 class Wrapper(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
@@ -17,7 +18,7 @@ class Wrapper(gym.ObservationWrapper):
             try:
                 raw_pixels = pygame.surfarray.array3d(pygame.display.get_surface())
                 raw_pixels = np.transpose(raw_pixels, (1, 0, 2))
-            except:
+            except Exception:
                 raw_pixels = np.zeros((512, 288, 3), dtype=np.uint8)
         else:
             raw_pixels = render_output

@@ -1,7 +1,7 @@
 # config.py
 
 MODEL_PATH = "model.pth"
-SAVE_EVERY = 100
+SAVE_EVERY = 500
 PERIODIC_MODEL_PATH = "./model"
 
 BATCH_SIZE = 128

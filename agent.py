@@ -2,7 +2,7 @@ import math
 import os
 import random
 from itertools import count
-from plotter import Plotter
+from monitor import Monitor
 
 import torch
 import torch.nn as nn
@@ -34,7 +34,7 @@ class Agent:
 
         self.steps_done = 0
 
-        self.plotter = Plotter()
+        self.monitor = Monitor()
         self.best_score = -float("inf")
 
         self._load_checkpoint()
@@ -128,7 +128,7 @@ class Agent:
                 )
 
     def train(self, num_episodes):
-        print(f"Training on {self.device}")
+        self.monitor.log(f"Training on {self.device}")
 
         try:
             for episode in range(num_episodes):
@@ -170,11 +170,11 @@ class Agent:
                     if done:
                         score = info.get("score", 0)
 
-                        self.plotter.update(episode_reward)
+                        self.monitor.update_plot(episode_reward)
 
                         if score > self.best_score:
                             self.best_score = score
-                            print(
+                            self.monitor.log(
                                 f"New high score | "
                                 f"Episode {episode} | "
                                 f"Score {score} | "
@@ -188,10 +188,10 @@ class Agent:
                         break
 
         except KeyboardInterrupt:
-            print("Training interrupted")
+            self.monitor.log("Training interrupted")
 
         finally:
-            print("Saving model...")
+            self.monitor.log("Saving model...")
             self.save()
-            self.plotter.close()
+            self.monitor.close()
             self.env.close()

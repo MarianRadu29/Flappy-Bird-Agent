@@ -1,16 +1,17 @@
 import math
 import os
 import random
-from itertools import count
-from monitor import Monitor
 
+import cv2
+from monitor import Monitor
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
 from dqn import DQN
 from replay_memory import ReplayMemory, Transition
-from config import *
+from config import MEMORY_SIZE, BATCH_SIZE, GAMMA, LR, EPS_START, EPS_END, EPS_DECAY, TAU, MODEL_PATH, SAVE_EVERY, PERIODIC_MODEL_PATH
 
 
 class Agent:
@@ -163,6 +164,16 @@ class Agent:
                         ).permute(2, 0, 1).unsqueeze(0)
 
                     self.memory.push(state, action, next_state, reward_tensor)
+                    if len(self.memory) == 150:
+                        img = state.squeeze(0).permute(1, 2, 0).cpu().numpy()
+                        if img.ndim == 3 and img.shape[-1] == 1:
+                            img = img.squeeze(-1)
+
+                        # scale [0,1] -> [0,255]
+                        if img.dtype != np.uint8:
+                            img = (img * 255).clip(0, 255).astype(np.uint8)
+
+                        cv2.imwrite("frame.png", img)
                     state = next_state
 
                     self.learn()

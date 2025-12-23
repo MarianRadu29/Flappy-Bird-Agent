@@ -8,7 +8,6 @@ class DQN(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Conv2d(n_channels, 32, kernel_size=8, stride=4)
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
 
@@ -20,16 +19,14 @@ class DQN(nn.Module):
         # trunk comun
         self.fc1 = nn.Linear(self.fc_input_dim, 512)
 
-        # Dueling Streams
-        # Value stream: estimeaza V(s) - cat de buna este starea curenta
+        # Value stream: estimeaza V(s) => cat de buna este starea curenta
         self.fc_val = nn.Linear(512, 1)
-        
-        # Advantage stream: estimeaza A(s, a) - cat de buna este fiecare actiune fata de medie
+
+        # Advantage stream: estimeaza A(s, a) => cat de buna este fiecare actiune fata de medie
         self.fc_adv = nn.Linear(512, n_actions)
 
     def _forward_conv(self, x):
         x = F.relu(self.conv1(x), inplace=True)
-        x = self.pool1(x)
         x = F.relu(self.conv2(x), inplace=True)
         x = F.relu(self.conv3(x), inplace=True)
         return x
@@ -38,7 +35,7 @@ class DQN(nn.Module):
         if x.dtype != torch.float32:
             x = x.float()
 
-        # normalization img 0..255 -> 0..1
+        # normalizare img 0..255 -> 0..1
         x = x / 255.0
 
         x = self._forward_conv(x)
@@ -53,5 +50,5 @@ class DQN(nn.Module):
         # Agregare Dueling: Q(s,a) = V(s) + (A(s,a) - mean(A(s,a)))
         # Scadem media pentru stabilitate (identifiability)
         q = val + (adv - adv.mean(dim=1, keepdim=True))
-        
+
         return q

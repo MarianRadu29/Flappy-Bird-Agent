@@ -112,12 +112,12 @@ $$ Loss = \left( \underbrace{R + \gamma \max_{a'} Q(S', a')}_{\text{Target}} - \
 ### Training
 To train the agent from scratch:
 ```bash
-python main.py
+python -B main.py
 ```
 
 ### Replay
 To watch a trained agent play (requires `model.pth`):
 ```bash
-python replay.py
+python -B replay.py
 ```
 

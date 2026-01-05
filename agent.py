@@ -22,11 +22,11 @@ class Agent:
         # Env info
         state, _ = env.reset()
         self.n_actions = env.action_space.n
-        self.n_channels = state.shape[2]
+        self.n_frames = state.shape[0]  # (n_frames, 84, 84)
 
         # Networks
-        self.policy_net = DQN(self.n_channels, self.n_actions).to(device)
-        self.target_net = DQN(self.n_channels, self.n_actions).to(device)
+        self.policy_net = DQN(self.n_frames, self.n_actions).to(device)
+        self.target_net = DQN(self.n_frames, self.n_actions).to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
@@ -64,6 +64,7 @@ class Agent:
         )
 
     def act(self, state):
+        """state = numpy array (n_frames, 84, 84)"""
         eps = EPS_END + (EPS_START - EPS_END) * math.exp(
             -self.steps_done / EPS_DECAY
         )
@@ -71,13 +72,12 @@ class Agent:
 
         if random.random() > eps:
             with torch.no_grad():
-                return self.policy_net(state).max(1).indices.view(1, 1)
+                state_tensor = torch.tensor(
+                    state, dtype=torch.float32, device=self.device
+                ).unsqueeze(0)
+                return self.policy_net(state_tensor).max(1).indices.item()
 
-        return torch.tensor(
-            [[self.env.action_space.sample()]],
-            device=self.device,
-            dtype=torch.long
-        )
+        return self.env.action_space.sample()
 
     def learn(self):
         if len(self.memory) < BATCH_SIZE:
@@ -92,20 +92,38 @@ class Agent:
             dtype=torch.bool
         )
 
-        non_final_next_states = torch.cat(
-            [s for s in batch.next_state if s is not None]
+        non_final_next_states = torch.tensor(
+            np.array([s for s in batch.next_state if s is not None]),
+            dtype=torch.float32,
+            device=self.device
         )
 
-        state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
-
+        state_batch = torch.tensor(
+            np.array(batch.state),
+            dtype=torch.float32,
+            device=self.device
+        )
+        action_batch = torch.tensor(
+            np.array(batch.action),
+            dtype=torch.long,
+            device=self.device
+        ).unsqueeze(1)
+        reward_batch = torch.tensor(
+            np.array(batch.reward),
+            dtype=torch.float32,
+            device=self.device
+        )
         state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
         next_state_values = torch.zeros(BATCH_SIZE, device=self.device)
+        # Double DQN
         with torch.no_grad():
+            # selectez actiunea optima folosind Policy Net (argmax Q_policy)
+            best_actions = self.policy_net(non_final_next_states).max(1).indices.unsqueeze(1)
+
+            # evaluez valoarea acelei actiuni folosind Target Net (Q_target)
             next_state_values[non_final_mask] = (
-                self.target_net(non_final_next_states).max(1).values
+                self.target_net(non_final_next_states).gather(1, best_actions).squeeze(1)
             )
 
         expected_q_values = reward_batch + GAMMA * next_state_values
@@ -134,46 +152,27 @@ class Agent:
         try:
             for episode in range(num_episodes):
                 obs, _ = self.env.reset()
-                state = torch.tensor(
-                    obs,
-                    dtype=torch.float32,
-                    device=self.device
-                ).permute(2, 0, 1).unsqueeze(0)
+                # obs rămâne numpy array pe CPU!
+                state = obs  # shape: (n_frames, 84, 84)
 
                 self.policy_net.train()
                 episode_reward = 0
 
                 while True:
-                    action = self.act(state)
+                    action = self.act(state)  # returnează int
 
-                    obs, reward, terminated, truncated, info = self.env.step(
-                        action.item()
-                    )
+                    obs, reward, terminated, truncated, info = self.env.step(action)
                     episode_reward += reward
-
-                    reward_tensor = torch.tensor([reward], device=self.device)
 
                     done = terminated or truncated
                     if done:
                         next_state = None
                     else:
-                        next_state = torch.tensor(
-                            obs,
-                            dtype=torch.float32,
-                            device=self.device
-                        ).permute(2, 0, 1).unsqueeze(0)
+                        next_state = obs  # numpy array pe CPU
 
-                    self.memory.push(state, action, next_state, reward_tensor)
-                    if len(self.memory) == 150:
-                        img = state.squeeze(0).permute(1, 2, 0).cpu().numpy()
-                        if img.ndim == 3 and img.shape[-1] == 1:
-                            img = img.squeeze(-1)
+                    # Buffer pe CPU: numpy, int, numpy/None, float
+                    self.memory.push(state, action, next_state, reward)
 
-                        # scale [0,1] -> [0,255]
-                        if img.dtype != np.uint8:
-                            img = (img * 255).clip(0, 255).astype(np.uint8)
-
-                        cv2.imwrite("frame.png", img)
                     state = next_state
 
                     self.learn()

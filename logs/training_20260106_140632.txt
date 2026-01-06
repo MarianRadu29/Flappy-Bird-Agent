@@ -1,0 +1,9 @@
+2026-01-06 14:06:32,337 - Training on cuda
+2026-01-06 14:06:41,355 - New high score | Episode 0 | Score 20 | Reward 95.00
+2026-01-06 14:07:35,621 - New high score | Episode 17 | Score 25 | Reward 121.00
+2026-01-06 14:07:52,404 - New high score | Episode 20 | Score 28 | Reward 134.40
+2026-01-06 14:08:45,251 - New high score | Episode 36 | Score 32 | Reward 152.90
+2026-01-06 14:11:09,084 - New high score | Episode 73 | Score 33 | Reward 158.10
+2026-01-06 14:16:26,593 - New high score | Episode 152 | Score 79 | Reward 370.10
+2026-01-06 14:17:38,183 - Training interrupted
+2026-01-06 14:17:38,185 - Saving model...

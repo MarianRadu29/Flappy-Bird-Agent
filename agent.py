@@ -2,7 +2,6 @@ import math
 import os
 import random
 
-import cv2
 from monitor import Monitor
 import numpy as np
 import torch
@@ -50,6 +49,7 @@ class Agent:
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         self.steps_done = checkpoint.get("steps_done", 0)
+        print(f"Loaded checkpoint from {MODEL_PATH} at step {self.steps_done}")
 
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
@@ -69,6 +69,8 @@ class Agent:
             -self.steps_done / EPS_DECAY
         )
         self.steps_done += 1
+        if eps == 0.05:
+            print(f"Epsilon: {eps:.4f}")
 
         if random.random() > eps:
             with torch.no_grad():
@@ -152,14 +154,14 @@ class Agent:
         try:
             for episode in range(num_episodes):
                 obs, _ = self.env.reset()
-                # obs rămâne numpy array pe CPU!
+                # obs ramane numpy array pe CPU!
                 state = obs  # shape: (n_frames, 84, 84)
 
                 self.policy_net.train()
                 episode_reward = 0
 
                 while True:
-                    action = self.act(state)  # returnează int
+                    action = self.act(state)  # return int
 
                     obs, reward, terminated, truncated, info = self.env.step(action)
                     episode_reward += reward

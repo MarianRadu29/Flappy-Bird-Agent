@@ -9,9 +9,13 @@ Transition = namedtuple(
 class ReplayMemory:
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
+        self.check = False
 
-    def push(self, *args):
-        self.memory.append(Transition(*args))
+    def push(self, state, action, next_state, reward):
+        self.memory.append(Transition(state, action, next_state, reward))
+        if not self.check and self.memory.maxlen == len(self.memory):
+            print("Replay memory full.")
+            self.check = True
 
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)

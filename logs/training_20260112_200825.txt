@@ -1,0 +1,2 @@
+2026-01-12 20:08:25,842 - Training on cuda
+2026-01-12 20:08:26,220 - New high score | Episode 0 | Score 0 | Reward -6.30

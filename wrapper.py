@@ -6,12 +6,6 @@ from collections import deque
 
 
 class Wrapper(gym.Wrapper):
-    """
-    Wrapper all-in-one pentru Flappy Bird:
-    - Image processing (extract objects, grayscale, resize 84x84)
-    - Frame stacking (4 frames consecutive as state)
-    """
-
     def __init__(self, env, n_frames=4):
         super().__init__(env)
         self.n_frames = n_frames
@@ -30,16 +24,16 @@ class Wrapper(gym.Wrapper):
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
-        # mask pentru cer (albastru)
+        # mask for sky(blue)
         sky_mask = cv2.inRange(hsv, np.array([90, 50, 50]), np.array([130, 255, 255]))
 
-        # mask pentru nori
+        # mask for clouds(white)
         cloud_mask = cv2.inRange(hsv, np.array([40, 0, 130]), np.array([100, 120, 255]))
 
-        # Verde de background (NU tevi / sol)
+        # green background mask (NU tevi / sol)
         bg_green_mask = cv2.inRange(hsv, np.array([50, 100, 100]), np.array([75, 255, 255]))
 
-        # Combin toate mastile de background
+        # merge all masks to get background
         background_mask = cv2.bitwise_or(sky_mask, cloud_mask)
         background_mask = cv2.bitwise_or(background_mask, bg_green_mask)
 

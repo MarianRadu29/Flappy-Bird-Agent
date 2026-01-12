@@ -68,5 +68,5 @@ class Monitor:
 
     def close(self):
         plt.ioff()
-        plt.savefig("training_plot.png")
+        plt.savefig("training_plot.png.png")
         plt.show()

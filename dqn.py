@@ -31,7 +31,7 @@ class DQN(nn.Module):
         if x.dtype != torch.float32:
             x = x.float()
 
-        # normalizare input
+        # input normalization
         x = x / 255.0
 
         x = self._forward_conv(x)
@@ -39,7 +39,6 @@ class DQN(nn.Module):
 
         x = F.relu(self.fc1(x), inplace=True)
 
-        # Q(s,a) direct - valoarea estimata pentru fiecare actiune
         q = self.fc2(x)
 
         return q

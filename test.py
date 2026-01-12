@@ -20,7 +20,7 @@ n_actions = env.action_space.n
 
 state, _ = env.reset()
 
-# state shape: (n_frames, 84, 84) - primul dim este numarul de frame-uri
+# state shape: (n_frames, 84, 84)
 n_channels = state.shape[0]
 
 policy_net = DQN(n_channels, n_actions).to(DEVICE)

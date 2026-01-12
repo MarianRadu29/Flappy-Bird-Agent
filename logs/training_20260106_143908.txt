@@ -17,3 +17,7 @@
 2026-01-06 21:23:37,826 - New high score | Episode 7244 | Score 31 | Reward 146.50
 2026-01-06 21:34:07,225 - New high score | Episode 7347 | Score 34 | Reward 160.60
 2026-01-06 22:51:56,428 - New high score | Episode 7803 | Score 56 | Reward 265.10
+2026-01-07 02:03:46,473 - New high score | Episode 9167 | Score 61 | Reward 289.30
+2026-01-07 04:09:13,736 - New high score | Episode 10256 | Score 71 | Reward 334.90
+2026-01-07 12:31:40,689 - Training interrupted
+2026-01-07 12:31:40,698 - Saving model...

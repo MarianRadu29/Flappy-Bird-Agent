@@ -1,110 +1,99 @@
 # Flappy Bird AI Agent (Double DQN)
 
-This project implements an AI agent capable of playing **Flappy Bird** using **Double Deep Q-Learning (Double DQN)**. The agent learns to play by processing raw screen pixels and selecting optimal actions to maximize the score.
+This project implements an AI agent capable of playing **Flappy Bird** using **Double Deep Q-Learning (Double DQN)**. The agent learns to play directly from **raw visual input**, using a Deep Q-Network to process frames and select optimal actions.
 
 ## Project Overview
 
-The agent interacts with the `flappy-bird-gymnasium` environment. It receives raw screen pixels as input, processes them through a Convolutional Neural Network (CNN), and outputs the best action (Flap or Do Nothing) to maximize the score.
+The core objective is to bridge the gap between computer vision and reinforcement learning. The agent "sees" the game through a series of processed frames and learns through trial and error which actions (flap or stay) lead to higher scores.
+
+### Key Features
+-   **Visual Learning**: Processes raw pixels instead of coordinate-based state vectors.
+-   **Double DQN**: Implements a robust learning algorithm that reduces overestimation bias.
+-   **Advanced Preprocessing**: Uses computer vision techniques (HSV masking) to isolate relevant game objects.
+-   **Temporal Awareness**: Employs frame stacking to help the agent understand motion and velocity.
+-   **Stable Updates**: Uses soft target updates (Polyak averaging) for smoother convergence.
+
+## State Representation & Preprocessing
+
+One of the project's highlights is its custom `Wrapper` that transforms the standard game output into an optimized input for the neural network.
+
+### 1. Object Isolation (HSV Masking)
+To help the agent focus on critical elements, the environment frames undergo an HSV-based filtering process:
+-   **Background Removal**: Masks out the sky, clouds, and static decorative background elements.
+-   **Object Extraction**: Isolates the bird, the pipes, and the ground.
+-   **Result**: A clean, binary-like image where only the "threats" and the agent are visible, significantly reducing the learning complexity.
+
+### 2. Spatial & Temporal Processing
+-   **Cropping**: Removes the bottom 410 pixels (ground/UI) to focus on the flight area.
+-   **Resizing**: Scales the image down to **84x84** pixels to optimize processing speed.
+-   **Frame Stacking**: Stacks **4 consecutive frames** into a single input tensor of shape `(4, 84, 84)`. This allows the CNN to "see" the bird's vertical velocity and gravity's effect over time.
 
 ## Network Architecture (Double DQN)
 
-The architecture follows a standard **Deep Q-Network** pattern with direct Q-value output.
+The agent uses a Deep Q-Network consisting of a Convolutional Neural Network (CNN) feature extractor followed by fully connected layers that output Q-values for each action.
 
-![Network Architecture](flow-nets.png)
-
-### 1. Input Processing
--   **Preprocessing**: Raw frames are resized to **84x84** pixels and converted to grayscale.
--   **Frame Stacking**: 4 consecutive frames are stacked to capture motion/velocity.
--   **Input Shape**: `(Batch_Size, 4, 84, 84)`.
-
-### 2. Feature Extractor (CNN)
-The image passes through convolutional layers to extract visual features (pipes, bird position):
-1.  **Conv1**: 32 filters, kernel 8x8, stride 4 (ReLU).
-2.  **Conv2**: 64 filters, kernel 4x4, stride 2 (ReLU).
-3.  **Conv3**: 64 filters, kernel 3x3, stride 1 (ReLU).
-
-The output is flattened and passed through fully connected layers:
-*   **FC1**: Linear(3136, 512) → ReLU
-*   **FC2**: Linear(512, 2) → **Q(s, a)** for each action
-
-### 3. Output Layer
-The network outputs **Q-values directly** for each action:
--   `Q(s, 0)`: Expected return for action "Do Nothing"
--   `Q(s, 1)`: Expected return for action "Flap"
-
+```text
+       Input (4, 84, 84)
+              ↓
+   Conv1 (32 filters, 8x8, stride 4)
+              ↓
+            ReLU
+              ↓
+   Conv2 (64 filters, 4x4, stride 2)
+              ↓
+            ReLU
+              ↓
+   Conv3 (64 filters, 3x3, stride 1)
+              ↓
+            ReLU
+              ↓
+           Flatten (3136)
+              ↓
+       FC1 (512 neurons)
+              ↓
+            ReLU
+              ↓
+       FC2 (2 neurons)
+              ↓
+        Q(s, "Nothing")
+        Q(s, "Flap")
 ```
-Input (4, 84, 84)
-       ↓
-   Conv1 (32 filters, 8x8, stride 4) + ReLU
-       ↓
-   Conv2 (64 filters, 4x4, stride 2) + ReLU
-       ↓
-   Conv3 (64 filters, 3x3, stride 1) + ReLU
-       ↓
-   Flatten (3136)
-       ↓
-   FC1 (512) + ReLU
-       ↓
-   FC2 (2) → Q(s, a)
-```
+
+### 1. Feature Extractor (CNN)
+The visual pipeline consists of three convolutional layers to extract critical features like pipe positions and bird orientation:
+1.  **Conv1**: 32 filters, 8x8 kernel, stride 4.
+2.  **Conv2**: 64 filters, 4x4 kernel, stride 2.
+3.  **Conv3**: 64 filters, 3x3 kernel, stride 1.
+
+### 2. Decision Head
+The extracted features are flattened and passed through fully connected layers:
+-   **FC1**: 512 neurons with ReLU activation.
+-   **FC2**: 2 output neurons representing the **Q-values** for each possible action.
 
 ## Mathematical Foundation
 
-### Q-Learning
-
-The Q-function $Q(s, a)$ represents the expected cumulative reward when taking action $a$ in state $s$ and following the optimal policy thereafter.
-
-**Bellman Equation:**
-$$ Q(s, a) = R + \gamma \max_{a'} Q(s', a') $$
-
-Where:
-*   $R$: Immediate reward
-*   $\gamma$: Discount factor
-*   $s'$: Next state
-
-### The Overestimation Problem
-
-Standard DQN uses the same network to both **select** and **evaluate** actions:
-$$ Q_{target} = R + \gamma \max_{a'} Q_{target}(s', a') $$
-
-This leads to **overestimation** of Q-values because the max operator uses the same noisy estimates for selection and evaluation.
-
 ### Double Q-Learning Solution
 
-**Double DQN** decouples action selection from action evaluation using two networks:
+Standard DQN often suffers from **overestimation** of Q-values because it uses the same network to both select and evaluate actions. **Double DQN** solves this by decoupling the two processes:
 
-1.  **Policy Network** selects the best action:
-    $$ a^* = \arg\max_{a'} Q_{policy}(s', a') $$
+1.  **Action Selection**: The **Policy Network** (θ) determines the best action for the next state:
+    ```text
+    a* = arg max Q(s', a'; θ)
+    ```
 
-2.  **Target Network** evaluates that action:
-    $$ Q_{target} = R + \gamma \cdot Q_{target}(s', a^*) $$
+2.  **Action Evaluation**: The **Target Network** (θ⁻) calculates the value of that specific action:
+    ```text
+    Q_target = R + γ · Q(s', a*; θ⁻)
+    ```
 
-**Final Update Formula:**
-$$ Q(s, a) = R + \gamma \cdot Q_{target}\left(s', \arg\max_{a'} Q_{policy}(s', a')\right) $$
-
-This reduces overestimation by using different networks for selection and evaluation.
-
-## Training Algorithm
-
-The agent uses **Double Deep Q-Learning** with **Experience Replay** and **Soft Target Updates**.
-
-### Experience Replay
-Transitions (`state`, `action`, `reward`, `next_state`) are stored in a buffer and sampled randomly to break temporal correlation.
+This prevents the agent from being overly optimistic about noisy reward estimates, leading to more stable and reliable training.
 
 ### Soft Target Update
-Instead of periodically copying weights, the target network is updated smoothly at each step:
-$$ \theta_{target} \leftarrow \tau \cdot \theta_{policy} + (1 - \tau) \cdot \theta_{target} $$
-
-Where $\tau$ is the soft update coefficient.
-
-### Loss Function
-The network minimizes the **Mean Squared Error (MSE)** between predicted and target Q-values:
-
-$$ Loss = \left( Q_{policy}(s, a) - \left( R + \gamma \cdot Q_{target}(s', a^*) \right) \right)^2 $$
-
-### Exploration Strategy (ε-greedy)
-The agent uses exponential decay for exploration:
-$$ \epsilon = \epsilon_{end} + (\epsilon_{start} - \epsilon_{end}) \cdot e^{-steps / decay} $$
+Instead of hard-copying weights every few thousand steps, we use **Polyak Averaging**:
+```text
+θ⁻ ← τθ + (1 - τ)θ⁻
+```
+With τ = 0.005, the target network follows the policy network slowly, providing a stable target for the loss function.
 
 ## Hyperparameters
 
@@ -125,14 +114,8 @@ All hyperparameters are defined in `config.py`:
     ```
 
 2.  **Activate the virtual environment**:
-    *   **Windows**:
-        ```bash
-        .\venv\Scripts\activate
-        ```
-    *   **Linux/macOS**:
-        ```bash
-        source venv/bin/activate
-        ```
+    *   **Windows**: `.\venv\Scripts\activate`
+    *   **Linux/macOS**: `source venv/bin/activate`
 
 3.  **Install dependencies**:
     ```bash
@@ -142,14 +125,14 @@ All hyperparameters are defined in `config.py`:
 ## Usage
 
 ### Training
-To train the agent from scratch:
+Start the training process:
 ```bash
 python -B main.py
 ```
+The agent will save checkpoints every 500 episodes and keep the best model in `model.pth`.
 
 ### Testing
-To watch a trained agent play (requires `model.pth`):
+Evaluate a trained agent:
 ```bash
 python -B test.py
 ```
-
